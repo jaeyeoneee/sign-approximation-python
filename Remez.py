@@ -151,7 +151,7 @@ if __name__ == '__main__':
     # chebyshev_eval_error test
     domain1 = 0.1
     domain2 = 1.0
-    degree = 31
+    degree = 41
     tol=1e-2
     max_iter=100
     w = 1
