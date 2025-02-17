@@ -6,7 +6,9 @@ def ME(domain1, domain2, degree, tol, max_iter, w, extreme_precision):
     return max_err
 
 
-def IME(target_err, search_range, degree, tol, max_iter, w, extreme_precision, IME_precision = 100, break_cond = 1e-5):
+def IME(target_err, search_range, degree, tol, max_iter, w, 
+        extreme_precision,
+        IME_precision = 100, break_cond = 1e-5):
     left, right = search_range
     
     for _ in range(IME_precision):

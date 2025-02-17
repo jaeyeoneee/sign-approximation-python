@@ -95,18 +95,18 @@ def remez_algorithm(domain1, domain2, degree, tol = 1e-2, max_iter = 100, w=1, e
     
     v_num = degree//2 + 2
 
-    print("v_num: ", v_num) 
+    # print("v_num: ", v_num) 
     
     # Step 1: Initial point generation
     x = np.linspace(domain1, domain2, v_num)
     
-    print("x: ", x)
+    # print("x: ", x)
     
     max_err = 0
     
     for i in range(max_iter):
-        print("------------")
-        print("iteration: ", i)
+        # print("------------")
+        # print("iteration: ", i)
         # Step 2 :Solve linear system for coefficients and error
         A = np.zeros((v_num, v_num))
         b = sign_function(x)
@@ -122,7 +122,7 @@ def remez_algorithm(domain1, domain2, degree, tol = 1e-2, max_iter = 100, w=1, e
     
         sol = np.linalg.solve(A, b)
 
-        print("coeff and error: ", sol)
+        # print("coeff and error: ", sol)
     
         # Step 3 4 : Find the new Extreme Points
         coeffs = sol[:-1]
@@ -130,8 +130,8 @@ def remez_algorithm(domain1, domain2, degree, tol = 1e-2, max_iter = 100, w=1, e
     
         extreme_points = find_extreme_points(coeffs, E, domain1, domain2, degree, w)
     
-        print("extreme_points: ", extreme_points)
-        print("extreme points size: ", len(extreme_points))
+        # print("extreme_points: ", extreme_points)
+        # print("extreme points size: ", len(extreme_points))
     
         max_err = np.max(np.array([np.abs(chebyshev_eval_error(coeffs, x, degree, w)) for x in extreme_points]))
         min_err = np.min(np.array([np.abs(chebyshev_eval_error(coeffs, x, degree, w)) for x in extreme_points]))
@@ -151,7 +151,7 @@ if __name__ == '__main__':
     # chebyshev_eval_error test
     domain1 = 0.1
     domain2 = 1.0
-    degree = 41
+    degree = 33
     tol=1e-2
     max_iter=100
     w = 1
