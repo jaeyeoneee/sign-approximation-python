@@ -1,5 +1,14 @@
 import numpy as np
 from IME import IME
+import time
+from functools import lru_cache
+from multiprocessing import Pool
+import multiprocessing
+
+# Memoize IME function calls
+@lru_cache(maxsize=1000)
+def cached_ime(target_err, deg):
+    return IME(target_err, (0, 1), deg, 1e-2, 100, 1, 100, 20)
 
 def dep(deg: int) -> int:
     """홀수 차수 deg(1,3,5,...)에 대한 깊이(depth)를 반환."""
@@ -17,104 +26,100 @@ def mult(deg: int) -> int:
          14, 14, 14, 14, 15, 15, 16, 17]  # deg: 1,3,5,7,...,63
     return m[(deg - 1) // 2]
 
+def process_degree(args):
+    m, n, deg, target_err, h_prev = args
+    if mult(deg) > m or dep(deg) > n:
+        return None
+    try:
+        temp = cached_ime(h_prev, deg)
+        return (deg, temp)
+    except:
+        return None
 
 def compute_min_multdepth(alpha, epsilon):
-    """
-    Compute the minimum multiplication and depth for given alpha and epsilon.
-
-    Parameters:
-        alpha (float): Precision parameter.
-        epsilon (float): Error threshold.
-
-    Returns:
-        mindep (int): Minimum depth.
-        minmult (int): Minimum multiplications.
-        optimal_degs (list): Optimal polynomial degrees.
-    """
+    maxdeg = 15
+    m_max, n_max = 10, 10 
+    target = (1 - epsilon) / (1 + epsilon)
     
-    # 최대 다항식 차수, 최대 연산 수, 최대 깊이 설정
-    maxdeg = 31  # 최대 다항식 차수 (odd)
-    m_max, n_max = 70, 40  # 최대 곱셈 연산 수, 최대 깊이
-    target = (1 - epsilon) / (1 + epsilon)  # 첫 번째 도메인
     print(f"------------------------------------")
     print(f"alpha: {alpha}")
     print(f"epsilon: {epsilon}")
 
-    # alpha에 대한 정수 a 찾기
-    a = 0
-    while a + 1 < alpha + 0.5:
-        a += 1
-
-    # h(m, n), G(m, n) 초기화
+    # Initialize tables
     h_table = np.zeros((m_max + 1, n_max + 1))
     G_table = [[[] for _ in range(n_max + 1)] for _ in range(m_max + 1)]
 
-    # h(m, n), G(m, n) 계산
+    # Base cases
     for m in range(m_max + 1):
         for n in range(n_max + 1):
-            G_table[m][n].clear()
-
-            # m<=1 또는 n<=1인 경우
             if m <= 1 or n <= 1:
                 h_table[m][n] = 2 ** (1 - alpha)
-            else:
-                best_k = None
-                max_val = 0
+
+    # Set up multiprocessing
+    num_cores = multiprocessing.cpu_count()
+    print(num_cores)
+    pool = Pool(processes=num_cores)
+
+    # Main computation with parallel processing
+    for m in range(2, m_max + 1):
+        for n in range(2, n_max + 1):
+            print(f"Processing m={m}, n={n}")
+            
+            # Generate all possible degrees to test
+            degrees = range(1, (maxdeg // 2) + 1)
+            args = [(m, n, 2*k+1, h_table[m - mult(2*k+1)][n - dep(2*k+1)], 
+                    h_table[m - mult(2*k+1)][n - dep(2*k+1)]) 
+                   for k in degrees 
+                   if mult(2*k+1) <= m and dep(2*k+1) <= n]
+            
+            if not args:
+                continue
+
+            # Process degrees in parallel
+            results = pool.map(process_degree, args)
+            valid_results = [r for r in results if r is not None]
+            
+            if valid_results:
+                best_deg, max_val = max(valid_results, key=lambda x: x[1])
+                h_table[m][n] = max_val
+                G_table[m][n] = [best_deg] + G_table[m - mult(best_deg)][n - dep(best_deg)]
                 
-                for k in range(1, (maxdeg // 2) + 1):  # k는 1부터 시작, 홀수 차수만 고려
-                    deg = 2 * k + 1
-                    if mult(deg) > m or dep(deg) > n or deg > maxdeg:
-                        continue
+                # Early termination if we found a solution
+                if h_table[m][n] >= target:
+                    break
 
-                    temp = IME(h_table[m - mult(deg)][n - dep(deg)], (0, 1), deg, 1e-2, 100, 1, 100)
+    pool.close()
+    pool.join()
 
-                    if temp > max_val:
-                        best_k = k
-                        max_val = temp
-
-                if best_k is not None:
-                    deg = 2 * best_k + 1
-                    h_table[m][n] = max_val
-                    G_table[m][n] = [deg] + G_table[m - mult(deg)][n - dep(deg)]
-
-    # ComputeMinDep: 최소 깊이 찾기
+    # Find minimum depth
     mindep = next((n for n in range(n_max + 1) if h_table[m_max][n] >= target), None)
     if mindep is None:
         print("Failure: Could not find minimum depth.")
         return None, None, None
 
-    print(f"mindep: {mindep}\n")
+    # Find minimum multiplications and optimal degrees
+    minmult = next((m for m in range(m_max + 1) if h_table[m][mindep] >= target), None)
+    if minmult is None:
+        print("Failure: Could not find minimum multiplications.")
+        return None, None, None
 
-    # ComputeMinMultDegs: 최소 곱셈 연산 및 최적 다항식 차수 찾기
-    optimal_degs = None
-    for dep_val in range(mindep, mindep + 10):
-        print(f"Checking depth: {dep_val}")
-        
-        minmult = next((m for m in range(m_max + 1) if h_table[m][dep_val] >= target), None)
-        if minmult is None:
-            print("Failure: Could not find minimum multiplications.")
-            continue
-        
-        print(f"minmult: {minmult}")
-        print(f"depth: {dep_val}")
-        print(f"h_table value: {h_table[minmult][dep_val]}")
-
-        current_degs = G_table[minmult][dep_val]
-        print("Optimal polynomial degrees:", current_degs, "\n")
-
-        # 첫 번째 valid depth 값에서 최적의 다항식 차수 선택
-        if dep_val == mindep:
-            optimal_degs = current_degs
+    optimal_degs = G_table[minmult][mindep]
 
     return mindep, minmult, optimal_degs
 
+if __name__ == "__main__":
+    alpha = 12
+    epsilon = 0.2
+    print(epsilon)
+    print((1 - epsilon) / (1 + epsilon))
 
-# 사용 예시
-alpha = 12
-epsilon = 1e-3
-mindep, minmult, optimal_degs = compute_min_multdepth(alpha, epsilon)
+    start_time = time.time()
+    mindep, minmult, optimal_degs = compute_min_multdepth(alpha, epsilon)
+    end_time = time.time()
 
-print(f"Final Results:")
-print(f"Minimum Depth: {mindep}")
-print(f"Minimum Multiplications: {minmult}")
-print(f"Optimal Degrees: {optimal_degs}")
+    print(f"\nExecution Time: {end_time - start_time} seconds")
+    print(f"\nResults:")
+    print(f"Minimum Depth: {mindep}")
+    print(f"Minimum Multiplications: {minmult}")
+    print(f"Optimal Degrees: {optimal_degs}")
+    print(f"Target Value: {(1 - epsilon) / (1 + epsilon)}")
