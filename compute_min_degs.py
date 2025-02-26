@@ -1,9 +1,11 @@
+import os
 import numpy as np
 from IME import IME
 import time
 from functools import lru_cache
 from multiprocessing import Pool
 import multiprocessing
+from Remez import remez_algorithm
 
 # Memoize IME function calls
 @lru_cache(maxsize=1000)
@@ -37,9 +39,37 @@ def process_degree(args):
         return None
 
 
+def save_results(optimal_degs, target_value):
+    degree_str = "_".join(map(str, optimal_degs))
+    filename = f"sign_{degree_str}.txt"
+    filepath = os.path.join("result", filename)
+    
+    os.makedirs("result", exist_ok=True)
+    
+    with open(filepath, "w") as f:
+        #  다항식 차수 개수 저장
+        f.write(f"{len(optimal_degs)}\n")
+        
+        # first error
+        print(optimal_degs[0])
+        coeffs, err = remez_algorithm(1- target_value, 1, optimal_degs[0])
+        print(coeffs)
+        coeffs_str = " ".join(map(str, coeffs))
+        f.write(f"{coeffs_str}\n")
+        
+        for i in range(len(optimal_degs) - 1):
+            print(optimal_degs[i + 1])
+            coeffs, err = remez_algorithm(1 - err, 1 + err, optimal_degs[i + 1])
+            coeffs_str = " ".join(map(str, coeffs))
+            f.write(f"{coeffs_str}\n")
+        
+        f.write(f"{target_value}\n")
+    
+    print(f"Results saved to {filepath}")
+        
 def compute_min_multdepth(alpha, epsilon):
-    maxdeg = 31
-    m_max, n_max = 80 , 30 
+    maxdeg = 15
+    m_max, n_max = 30, 20
     target = (1 - epsilon) / (1 + epsilon)
     
     print(f"------------------------------------")
@@ -117,18 +147,21 @@ def compute_min_multdepth(alpha, epsilon):
 
 
 if __name__ == "__main__":
-    alpha = 12
-    epsilon = 0.05
-    print(epsilon)
-    print((1 - epsilon) / (1 + epsilon))
+    # alpha = 12
+    # epsilon = 0.05
+    # print(epsilon)
+    # print((1 - epsilon) / (1 + epsilon))
 
-    start_time = time.time()
-    mindep, minmult, optimal_degs = compute_min_multdepth(alpha, epsilon)
-    end_time = time.time()
+    # start_time = time.time()
+    # mindep, minmult, optimal_degs = compute_min_multdepth(alpha, epsilon)
+    # end_time = time.time()
 
-    print(f"\nExecution Time: {end_time - start_time} seconds")
-    print(f"\nResults:")
-    print(f"Minimum Depth: {mindep}")
-    print(f"Minimum Multiplications: {minmult}")
-    print(f"Optimal Degrees: {optimal_degs}")
-    print(f"Target Value: {(1 - epsilon) / (1 + epsilon)}")
+    # print(f"\nExecution Time: {end_time - start_time} seconds")
+    # print(f"\nResults:")
+    # print(f"Minimum Depth: {mindep}")
+    # print(f"Minimum Multiplications: {minmult}")
+    # print(f"Optimal Degrees: {optimal_degs}")
+    # print(f"Target Value: {(1 - epsilon) / (1 + epsilon)}")
+    
+    # file save test
+    save_results([13, 13], 0.9047619047619047)

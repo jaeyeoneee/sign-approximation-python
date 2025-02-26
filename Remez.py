@@ -46,7 +46,8 @@ def chebyshev_eval_error(coeffs, x, degree, w):
     return chebyshev_eval(coeffs, x, degree, w) - sign_function(x)
 
 
-def find_extreme_points(coeffs, domain1, domain2, degree, w, precision = 100, extreme_precision = 100):
+def find_extreme_points(coeffs, domain1, domain2, degree, w, precision = 100, extreme_precision = 1000):
+    # extreme precision이 충분히 크지 않으면 극점을 정확히 찾지 못해 행렬 연산 과정에서 오류가 발생할 수 있음
     sc = (domain2 - domain1) / (degree * extreme_precision)
     
     x_prev1 = domain1
