@@ -19,7 +19,7 @@ print(", ".join(f"{x:.10f}" for x in second_coeffs))
 print("second err:", second_err)
 
 # Evaluate the polynomials
-x_vals = np.linspace(0.1, 1, 1000)
+x_vals = np.linspace(-1, 1, 1000)
 y_true = sign_function(x_vals)
 
 try:
