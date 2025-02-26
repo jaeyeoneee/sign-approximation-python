@@ -10,21 +10,21 @@ import multiprocessing
 def cached_ime(target_err, deg):
     return IME(target_err, (0, 1), deg, 1e-2, 100, 1, 100, 20)
 
+
+# dep와 mult의 값은 openFHE 코드 중 CustomEvalPoly로 계산한 값을 사용
 def dep(deg: int) -> int:
     """홀수 차수 deg(1,3,5,...)에 대한 깊이(depth)를 반환."""
-    d = [0, 2, 3, 3, 4, 4, 4, 4, 
-         5, 5, 5, 5, 5, 5, 5, 5, 
-         6, 6, 6, 6, 6, 6, 6, 6, 
-         6, 6, 6, 6, 6, 6, 6, 6]  # deg: 1,3,5,7,...,63
+    d = [0, 3, 4, 4, 5, 5, 5, 5, 
+         6, 6, 6, 6, 6, 6, 6, 6]  # deg: 1,3,5,7,...,31
     return d[(deg - 1) // 2]
+
 
 def mult(deg: int) -> int:
     """홀수 차수 deg(1,3,5,...)에 대한 곱셈 연산 수를 반환."""
-    m = [0, 2, 3, 5, 5, 6, 7, 8, 
-         8, 8, 9, 9, 10, 10, 11, 12, 
-         11, 11, 11, 11, 12, 12, 13, 13, 
-         14, 14, 14, 14, 15, 15, 16, 17]  # deg: 1,3,5,7,...,63
+    m = [0, 2, 4, 6, 8, 10, 12, 14,
+         16, 18, 20, 22, 24, 26, 28, 30]  # deg: 1,3,5,7,...,63
     return m[(deg - 1) // 2]
+
 
 def process_degree(args):
     m, n, deg, target_err, h_prev = args
@@ -36,9 +36,10 @@ def process_degree(args):
     except:
         return None
 
+
 def compute_min_multdepth(alpha, epsilon):
-    maxdeg = 15
-    m_max, n_max = 10, 10 
+    maxdeg = 31
+    m_max, n_max = 80 , 30 
     target = (1 - epsilon) / (1 + epsilon)
     
     print(f"------------------------------------")
@@ -54,6 +55,8 @@ def compute_min_multdepth(alpha, epsilon):
         for n in range(n_max + 1):
             if m <= 1 or n <= 1:
                 h_table[m][n] = 2 ** (1 - alpha)
+                
+    print(2**(1-alpha))
 
     # Set up multiprocessing
     num_cores = multiprocessing.cpu_count()
@@ -64,6 +67,8 @@ def compute_min_multdepth(alpha, epsilon):
     for m in range(2, m_max + 1):
         for n in range(2, n_max + 1):
             print(f"Processing m={m}, n={n}")
+            
+            start_time_inner = time.time()
             
             # Generate all possible degrees to test
             degrees = range(1, (maxdeg // 2) + 1)
@@ -87,6 +92,9 @@ def compute_min_multdepth(alpha, epsilon):
                 # Early termination if we found a solution
                 if h_table[m][n] >= target:
                     break
+            
+            end_time_inner = time.time()
+            print(f"Time for m={m}, n={n}: {end_time_inner - start_time_inner} seconds")
 
     pool.close()
     pool.join()
@@ -107,9 +115,10 @@ def compute_min_multdepth(alpha, epsilon):
 
     return mindep, minmult, optimal_degs
 
+
 if __name__ == "__main__":
     alpha = 12
-    epsilon = 0.2
+    epsilon = 0.05
     print(epsilon)
     print((1 - epsilon) / (1 + epsilon))
 

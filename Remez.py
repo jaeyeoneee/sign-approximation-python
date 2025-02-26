@@ -46,7 +46,7 @@ def chebyshev_eval_error(coeffs, x, degree, w):
     return chebyshev_eval(coeffs, x, degree, w) - sign_function(x)
 
 
-def find_extreme_points(coeffs, error, domain1, domain2, degree, w, precision = 100, extreme_precision = 100):
+def find_extreme_points(coeffs, domain1, domain2, degree, w, precision = 100, extreme_precision = 100):
     sc = (domain2 - domain1) / (degree * extreme_precision)
     
     x_prev1 = domain1
@@ -89,7 +89,9 @@ def find_extreme_points(coeffs, error, domain1, domain2, degree, w, precision = 
     extreme_rs = np.sort(np.concatenate((np.array([domain1]), np.array(extreme_point), np.array([domain2]))))
     return extreme_rs
 
+
 def remez_algorithm(domain1, domain2, degree, tol = 1e-2, max_iter = 100, w=1, extreme_precision = 100):
+
     if (degree % 2) == 0:
         raise ValueError("Degree must be odd for sign function approximation")
     
@@ -114,6 +116,7 @@ def remez_algorithm(domain1, domain2, degree, tol = 1e-2, max_iter = 100, w=1, e
         # print("b: ", b)
         
         for i in range(v_num):
+            # print(v_num, i)
             basis_values = chebyshev_odd_basis(degree, x[i], w)
             A[i, :-1] = basis_values
             A[i, -1] = (-1)**(i+1)
@@ -126,9 +129,8 @@ def remez_algorithm(domain1, domain2, degree, tol = 1e-2, max_iter = 100, w=1, e
     
         # Step 3 4 : Find the new Extreme Points
         coeffs = sol[:-1]
-        E = coeffs[-1]
     
-        extreme_points = find_extreme_points(coeffs, E, domain1, domain2, degree, w)
+        extreme_points = find_extreme_points(coeffs, domain1, domain2, degree, w, extreme_precision)
     
         # print("extreme_points: ", extreme_points)
         # print("extreme points size: ", len(extreme_points))
@@ -144,18 +146,15 @@ def remez_algorithm(domain1, domain2, degree, tol = 1e-2, max_iter = 100, w=1, e
     return coeffs, max_err 
         
     
-    
-
-
 if __name__ == '__main__':
     # chebyshev_eval_error test
     domain1 = 0.1
     domain2 = 1.0
-    degree = 33
+    degree = 23
     tol=1e-2
     max_iter=100
     w = 1
-    extreme_precision = 100
+    extreme_precision = 1000
     
     coeffs, max_err = remez_algorithm(domain1, domain2, degree, tol, max_iter, w, extreme_precision)
     print("max_err: ", max_err)
